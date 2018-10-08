@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Spotify AB.
+ * Copyright (c) 2018 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -38,7 +38,6 @@
 #import "SPTPersistentCacheFileManager.h"
 #import "NSFileManagerMock.h"
 #import "SPTPersistentCachePosixWrapperMock.h"
-#import "SPTPersistentCache+Private.h"
 
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -1016,7 +1015,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
 /**
  * This test also checks Req.#1.2 for cache API
  */
-- (void)testTouchOnlyRecordsWithDefaultExpirtion
+- (void)testTouchOnlyRecordsWithDefaultExpiration
 {
     SPTPersistentCache *cache = [self createCacheWithTimeCallback:^NSTimeInterval{
         return kTestEpochTime + SPTPersistentCacheDefaultExpirationTimeSec - 1;
@@ -1316,7 +1315,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
                                  [expectation fulfill];
                              }
                                   onQueue:dispatch_get_main_queue()];
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testNotFoundIfCacheDirectoryIsDeleted
@@ -1329,7 +1328,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeNotFound);
         [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testNoValidKeys
@@ -1341,7 +1340,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeNotFound);
         [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testTouchDataWithExpiredHeader
@@ -1355,13 +1354,14 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
         self.cache.timeIntervalCallback = ^ {
             return kTestEpochTime * 100.0;
         };
-        __block BOOL called = NO;
+        __weak XCTestExpectation * const expectation = [self expectationWithDescription:@"callback expectation"];
         [self.cache touchDataForKey:key callback:^(SPTPersistentCacheResponse *response) {
-            called = YES;
             XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeNotFound);
+            [expectation fulfill];
         } onQueue:dispatch_get_main_queue()];
         break;
     }
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testLockDataWithExpiredHeader
@@ -1375,13 +1375,14 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
         self.cache.timeIntervalCallback = ^ {
             return kTestEpochTime * 100.0;
         };
-        __block BOOL called = NO;
+        __weak XCTestExpectation * const expectation = [self expectationWithDescription:@"callback expectation"];
         [self.cache lockDataForKeys:@[key] callback:^(SPTPersistentCacheResponse *response) {
-            called = YES;
             XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeNotFound);
+            [expectation fulfill];
         } onQueue:dispatch_get_main_queue()];
         break;
     }
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testUnlockDataMoreTimesThanLocked
@@ -1445,7 +1446,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationError);
         [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
     method_setImplementation(originalMethod, originalMethodImplementation);
 }
 
@@ -1469,7 +1470,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationSucceeded);
         [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
     method_setImplementation(originalMethod, originalMethodImplementation);
 }
 
@@ -1487,7 +1488,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationError);
         [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
     method_setImplementation(originalMethod, originalMethodImplementation);
 }
 
@@ -1500,11 +1501,12 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
         __strong __typeof(weakFileManagerMock) strongFileManagerMock = weakFileManagerMock;
         [[NSFileManager defaultManager] removeItemAtPath:strongFileManagerMock.lastPathCalledOnExists error:nil];
     };
-    __block BOOL called = NO;
+    __weak XCTestExpectation * const expectation = [self expectationWithDescription:@"callback expectation"];
     [self.cache touchDataForKey:self.imageNames[0] callback:^(SPTPersistentCacheResponse *response) {
-        called = YES;
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationError);
+        [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testCloseFailure
@@ -1512,11 +1514,12 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
     SPTPersistentCachePosixWrapperMock *posixWrapperMock = [SPTPersistentCachePosixWrapperMock new];
     self.cache.test_posixWrapper = posixWrapperMock;
     posixWrapperMock.closeValue = -1;
-    __block BOOL called = NO;
+    __weak XCTestExpectation * const expectation = [self expectationWithDescription:@"callback expectation"];
     [self.cache touchDataForKey:self.imageNames[0] callback:^(SPTPersistentCacheResponse *response) {
-        called = YES;
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationError);
+        [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testReadFailure
@@ -1525,11 +1528,12 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
     self.cache.test_posixWrapper = posixWrapperMock;
     posixWrapperMock.readValue = -1;
     posixWrapperMock.readOverridden = YES;
-    __block BOOL called = NO;
+    __weak XCTestExpectation * const expectation = [self expectationWithDescription:@"callback expectation"];
     [self.cache touchDataForKey:self.imageNames[0] callback:^(SPTPersistentCacheResponse *response) {
-        called = YES;
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationError);
+        [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testlseekFailure
@@ -1540,11 +1544,12 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
     SPTPersistentCachePosixWrapperMock *posixWrapperMock = [SPTPersistentCachePosixWrapperMock new];
     self.cache.test_posixWrapper = posixWrapperMock;
     posixWrapperMock.lseekValue = -1;
-    __block BOOL called = NO;
+    __weak XCTestExpectation * const expectation = [self expectationWithDescription:@"callback expectation"];
     [self.cache touchDataForKey:self.imageNames[0] callback:^(SPTPersistentCacheResponse *response) {
-        called = YES;
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationError);
+        [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testWriteFailure
@@ -1555,11 +1560,12 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
     SPTPersistentCachePosixWrapperMock *posixWrapperMock = [SPTPersistentCachePosixWrapperMock new];
     self.cache.test_posixWrapper = posixWrapperMock;
     posixWrapperMock.writeValue = 0;
-    __block BOOL called = NO;
+    __weak XCTestExpectation * const expectation = [self expectationWithDescription:@"callback expectation"];
     [self.cache touchDataForKey:self.imageNames[0] callback:^(SPTPersistentCacheResponse *response) {
-        called = YES;
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationError);
+        [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testFsyncFailure
@@ -1571,11 +1577,12 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
     self.cache.test_posixWrapper = posixWrapperMock;
     posixWrapperMock.writeValue = (ssize_t)SPTPersistentCacheRecordHeaderSize;
     posixWrapperMock.fsyncValue = -1;
-    __block BOOL called = NO;
+    __weak XCTestExpectation * const expectation = [self expectationWithDescription:@"callback expectation"];
     [self.cache touchDataForKey:self.imageNames[0] callback:^(SPTPersistentCacheResponse *response) {
-        called = YES;
         XCTAssertEqual(response.result, SPTPersistentCacheResponseCodeOperationError);
+        [expectation fulfill];
     } onQueue:dispatch_get_main_queue()];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testStoreLargeTTL
@@ -1591,14 +1598,14 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
                  [expectation fulfill];
              }
                   onQueue:dispatch_get_main_queue()];
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
     
     __weak XCTestExpectation * const debugExpectation = [self expectationWithDescription:@"debug expectation"];
     self.cache.test_debugOutput = ^(NSString *output) {
         [debugExpectation fulfill];
     };
     [self.cache touchDataForKey:key callback:nil onQueue:nil];
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 
 }
 
@@ -1739,7 +1746,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
                                   callback:callback
                                    onQueue:dispatch_get_main_queue()];
 
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 - (void)testDispatchErrorWithNilCallbackDoesNothing
@@ -1781,7 +1788,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
                 callback:callback
                  onQueue:dispatch_get_main_queue()];
 
-    [self waitForExpectationsWithTimeout:0.5 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 #pragma mark Test Dispatching Blocks
@@ -1821,7 +1828,7 @@ typedef NSTimeInterval (^SPTPersistentCacheCurrentTimeSecCallback)(void);
 
     SPTPersistentCacheSafeDispatch(queue, block);
 
-    [self waitForExpectationsWithTimeout:2.0 handler:nil];
+    [self waitForExpectationsWithTimeout:kDefaultWaitTime handler:nil];
 }
 
 #pragma mark - Internal methods

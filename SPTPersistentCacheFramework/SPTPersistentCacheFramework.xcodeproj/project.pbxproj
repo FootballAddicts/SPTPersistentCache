@@ -294,7 +294,7 @@
 			isa = PBXProject;
 			attributes = {
 				CLASSPREFIX = SPTPersistentCache;
-				LastUpgradeCheck = 0820;
+				LastUpgradeCheck = 0900;
 				ORGANIZATIONNAME = Spotify;
 				TargetAttributes = {
 					0520219B1C737DBE003A4FB4 = {
@@ -409,6 +409,7 @@
 				DEFINES_MODULE = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.spotify.SPTPersistentCache-iOS";
 				PRODUCT_NAME = SPTPersistentCache;
+				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
 				VALID_ARCHS = "i386 x86_64 armv7 arm64 armv7s";
@@ -421,6 +422,7 @@
 				DEFINES_MODULE = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.spotify.SPTPersistentCache-iOS";
 				PRODUCT_NAME = SPTPersistentCache;
+				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
 				VALID_ARCHS = "i386 x86_64 armv7 arm64 armv7s";

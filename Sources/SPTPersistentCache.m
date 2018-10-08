@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Spotify AB.
+ * Copyright (c) 2018 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,7 +24,6 @@
 
 #import "SPTPersistentCacheRecord+Private.h"
 #import "SPTPersistentCacheResponse+Private.h"
-#import "SPTPersistentCache+Private.h"
 #import "SPTPersistentCacheGarbageCollector.h"
 #import "NSError+SPTPersistentCacheDomainErrors.h"
 #import "SPTPersistentCacheFileManager.h"
@@ -737,9 +736,13 @@ void SPTPersistentCacheSafeDispatch(_Nullable dispatch_queue_t queue, _Nonnull d
             if (readBytes == -1) {
                 const int errorNumber = errno;
                 const char *errorString = strerror(errorNumber);
+                NSString *errorNSString = [NSString stringWithUTF8String:errorString];
+                if (errorNSString.length == 0) {
+                    errorNSString = @"";
+                }
                 error = [NSError errorWithDomain:NSPOSIXErrorDomain
                                             code:errorNumber
-                                        userInfo:@{ NSLocalizedDescriptionKey: @(errorString) }];
+                                        userInfo:@{ NSLocalizedDescriptionKey: errorNSString }];
             }
 
             [self debugOutput:@"PersistentDataCache: Error not enough data to read the header of file path:%@ , error:%@",
@@ -1015,12 +1018,14 @@ void SPTPersistentCacheSafeDispatch(_Nullable dispatch_queue_t queue, _Nonnull d
         if ([theURL getResourceValue:&isDirectory forKey:NSURLIsDirectoryKey error:NULL]) {
 
             if ([isDirectory boolValue] == NO) {
+                const char *filePath = theURL.fileSystemRepresentation;
+                NSString *filePathString = [NSString stringWithUTF8String:filePath];
 
                 // We skip locked files always
                 BOOL __block locked = NO;
-
+                
                 // WARNING: We may skip return result here bcuz in that case we will remove unknown file as unlocked trash
-                [self alterHeaderForFileAtPath:[NSString stringWithUTF8String:theURL.fileSystemRepresentation]
+                [self alterHeaderForFileAtPath:filePathString
                                      withBlock:^(SPTPersistentCacheRecordHeader *header) {
                                          locked = (header->refCount > 0);
                                      } writeBack:NO
@@ -1034,7 +1039,7 @@ void SPTPersistentCacheSafeDispatch(_Nullable dispatch_queue_t queue, _Nonnull d
                  which is described in apple doc and its our case here */
 
                 struct stat fileStat;
-                int ret = [self.posixWrapper stat:[theURL fileSystemRepresentation] statStruct:&fileStat];
+                int ret = [self.posixWrapper stat:filePath statStruct:&fileStat];
                 if (ret == -1) {
                     [self debugOutput:@"Cannot find the stats of file: %@", theURL.absoluteString];
                     continue;
@@ -1048,8 +1053,7 @@ void SPTPersistentCacheSafeDispatch(_Nullable dispatch_queue_t queue, _Nonnull d
                 NSNumber *fsize = [NSNumber numberWithLongLong:fileStat.st_size];
                 NSDictionary *values = @{NSFileModificationDate : mdate, NSFileSize: fsize};
 
-                NSString *cacheFilename = [NSString stringWithUTF8String:[theURL fileSystemRepresentation]];
-                [images addObject:@{ SPTDataCacheFileNameKey : cacheFilename,
+                [images addObject:@{ SPTDataCacheFileNameKey : filePathString,
                                      SPTDataCacheFileAttributesKey : values }];
             }
         } else {

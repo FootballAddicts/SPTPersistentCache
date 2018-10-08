@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Spotify AB.
+ * Copyright (c) 2018 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,7 +26,7 @@
 
 const NSUInteger SPTPersistentCacheDefaultExpirationTimeSec = 10 * 60;
 const NSUInteger SPTPersistentCacheDefaultGCIntervalSec = 6 * 60 + 3;
-const NSUInteger SPTPersistentCacheDefaultCacheSizeInBytes = 0; // unbounded
+static const NSUInteger SPTPersistentCacheDefaultCacheSizeInBytes = 0; // unbounded
 const double SPTPersistentCacheDefaultMinFreeDiskSpaceFraction = 0.1; // 10% of total disk size
 
 const NSUInteger SPTPersistentCacheMinimumGCIntervalLimit = 60;
@@ -123,6 +123,16 @@ static NSUInteger SPTGuardedPropertyValue(NSUInteger proposedValue, NSUInteger m
 
     copy.debugOutput = self.debugOutput;
     copy.timingCallback = self.timingCallback;
+
+    copy.maxConcurrentOperations = self.maxConcurrentOperations;
+    copy.writePriority = self.writePriority;
+    copy.writeQualityOfService = self.writeQualityOfService;
+    copy.readPriority = self.readPriority;
+    copy.readQualityOfService = self.readQualityOfService;
+    copy.deletePriority = self.deletePriority;
+    copy.deleteQualityOfService = self.deleteQualityOfService;
+    copy.garbageCollectionPriority = self.garbageCollectionPriority;
+    copy.garbageCollectionQualityOfService = self.garbageCollectionQualityOfService;
 
     return copy;
 }
